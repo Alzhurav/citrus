@@ -79,7 +79,7 @@ public class HttpStepsTest extends AbstractTestNGUnitTest {
         Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getHeader(HttpMessageHeaders.HTTP_REQUEST_URI), "http://localhost:8080/test");
         Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getHeader(HttpMessageHeaders.HTTP_REQUEST_METHOD), "POST");
         Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getHeader("Accept-Charset"), "utf-8");
-        Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getPayload(String.class), "<TestRequestMessage>\n  <text>Hello server</text>\n</TestRequestMessage>");
+        Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getPayload(String.class), "<TestRequestMessage>\r\n  <text>Hello server</text>\r\n</TestRequestMessage>");
     }
 
     @Test
@@ -96,7 +96,7 @@ public class HttpStepsTest extends AbstractTestNGUnitTest {
         Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getHeader(HttpMessageHeaders.HTTP_STATUS_CODE), 200);
         Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getHeader(HttpMessageHeaders.HTTP_CONTENT_TYPE), "text/plain;charset=utf-8");
         Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getHeader("Accept-Charset"), "utf-8");
-        Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getPayload(String.class), "<TestResponseMessage>\n  <text>Hello Citrus</text>\n</TestResponseMessage>");
+        Assert.assertEquals(((HttpMessageContentBuilder) action.getMessageBuilder()).getMessage().getPayload(String.class), "<TestResponseMessage>\r\n  <text>Hello Citrus</text>\r\n</TestResponseMessage>");
     }
 
 }
