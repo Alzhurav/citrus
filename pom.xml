@@ -5,7 +5,7 @@
   <groupId>com.consol.citrus</groupId>
   <artifactId>citrus</artifactId>
   <packaging>pom</packaging>
-  <version>2.7.3-SNAPSHOT</version>
+  <version>2.7.21</version>
   <name>citrus</name>
   <description>Citrus Test Framework</description>
   <url>http://www.citrusframework.org</url>
@@ -38,25 +38,25 @@
     <module>modules/citrus-core</module>
     <module>modules/citrus-jms</module>
     <module>modules/citrus-http</module>
-    <module>modules/citrus-websocket</module>
-    <module>modules/citrus-ssh</module>
+    <!--<module>modules/citrus-websocket</module>-->
+    <!--<module>modules/citrus-ssh</module>-->
     <module>modules/citrus-ws</module>
-    <module>modules/citrus-mail</module>
-    <module>modules/citrus-ftp</module>
-    <module>modules/citrus-camel</module>
-    <module>modules/citrus-vertx</module>
-    <module>modules/citrus-docker</module>
-    <module>modules/citrus-kubernetes</module>
-    <module>modules/citrus-rmi</module>
-    <module>modules/citrus-jmx</module>
-    <module>modules/citrus-restdocs</module>
-    <module>modules/citrus-zookeeper</module>
-    <module>modules/citrus-selenium</module>
+    <!--<module>modules/citrus-mail</module>-->
+    <!--<module>modules/citrus-ftp</module>-->
+    <!--<module>modules/citrus-camel</module>-->
+    <!--<module>modules/citrus-vertx</module>-->
+    <!--<module>modules/citrus-docker</module>-->
+    <!--<module>modules/citrus-kubernetes</module>-->
+    <!--<module>modules/citrus-rmi</module>-->
+    <!--<module>modules/citrus-jmx</module>-->
+    <!--<module>modules/citrus-restdocs</module>-->
+    <!--<module>modules/citrus-zookeeper</module>-->
+    <!--<module>modules/citrus-selenium</module>-->
     <module>modules/citrus-java-dsl</module>
-    <module>modules/citrus-cucumber</module>
-    <module>modules/citrus-arquillian</module>
-    <module>modules/citrus-integration</module>
-    <module>modules/citrus-bom</module>
+    <!--<module>modules/citrus-cucumber</module>-->
+    <!--<module>modules/citrus-arquillian</module>-->
+    <!--<module>modules/citrus-integration</module>-->
+    <!--<module>modules/citrus-bom</module>-->
   </modules>
 
   <developers>
@@ -900,7 +900,7 @@
 
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.20.1</version>
+          <version>2.20</version>
           <configuration>
             <systemProperties>
               <property>
@@ -926,7 +926,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.20.1</version>
+          <version>2.20</version>
           <executions>
             <execution>
               <id>integration-tests</id>
