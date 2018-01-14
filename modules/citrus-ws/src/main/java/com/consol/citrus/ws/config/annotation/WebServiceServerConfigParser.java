@@ -27,7 +27,7 @@ import org.eclipse.jetty.security.SecurityHandler;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.springframework.util.StringUtils;
-import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.ws.server.EndpointInterceptor;
 
 /**
  * @author Christoph Deppisch
@@ -103,11 +103,13 @@ public class WebServiceServerConfigParser extends AbstractAnnotationConfigParser
             builder.securityHandler(getReferenceResolver().resolve(annotation.securityHandler(), SecurityHandler.class));
         }
 
+        builder.debugLogging(annotation.debugLogging());
+
         if (StringUtils.hasText(annotation.endpointAdapter())) {
             builder.endpointAdapter(getReferenceResolver().resolve(annotation.endpointAdapter(), EndpointAdapter.class));
         }
 
-        builder.interceptors(getReferenceResolver().resolve(annotation.interceptors(), HandlerInterceptor.class));
+        builder.interceptors(getReferenceResolver().resolve(annotation.interceptors(), EndpointInterceptor.class));
 
         if (StringUtils.hasText(annotation.actor())) {
             builder.actor(getReferenceResolver().resolve(annotation.actor(), TestActor.class));

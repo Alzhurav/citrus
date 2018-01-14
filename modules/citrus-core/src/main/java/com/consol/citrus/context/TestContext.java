@@ -29,7 +29,7 @@ import com.consol.citrus.report.MessageListeners;
 import com.consol.citrus.report.TestListeners;
 import com.consol.citrus.util.TypeConversionUtils;
 import com.consol.citrus.validation.MessageValidatorRegistry;
-import com.consol.citrus.validation.interceptor.MessageConstructionInterceptors;
+import com.consol.citrus.validation.interceptor.GlobalMessageConstructionInterceptors;
 import com.consol.citrus.validation.matcher.ValidationMatcherRegistry;
 import com.consol.citrus.variable.GlobalVariables;
 import com.consol.citrus.variable.VariableUtils;
@@ -87,7 +87,7 @@ public class TestContext {
     private MessageListeners messageListeners = new MessageListeners();
 
     /** List of global message construction interceptors */
-    private MessageConstructionInterceptors messageConstructionInterceptors = new MessageConstructionInterceptors();
+    private GlobalMessageConstructionInterceptors globalMessageConstructionInterceptors = new GlobalMessageConstructionInterceptors();
 
     /** Central namespace context builder */
     private NamespaceContextBuilder namespaceContextBuilder = new NamespaceContextBuilder();
@@ -105,7 +105,7 @@ public class TestContext {
      * Default constructor
      */
     public TestContext() {
-        variables = new ConcurrentHashMap<String, Object>();
+        variables = new ConcurrentHashMap<>();
     }
     
     /**
@@ -213,6 +213,26 @@ public class TestContext {
 
         variables.put(VariableUtils.cutOffVariablesPrefix(variableName), value);
     }
+
+    /**
+     * Add variables to context.
+     * @param variableNames the variable names to set
+     * @param variableValues the variable values to set
+     */
+    public void addVariables(String[] variableNames, Object[] variableValues) {
+        if (variableNames.length != variableValues.length) {
+            throw new CitrusRuntimeException(String.format(
+                    "Invalid context variable usage - received '%s' variables with '%s' values",
+                    variableNames.length,
+                    variableValues.length));
+        }
+
+        for (int i = 0; i < variableNames.length; i++) {
+            if (variableValues[i] != null) {
+                setVariable(variableNames[i], variableValues[i]);
+            }
+        }
+    }
     
     /**
      * Add several new variables to test context. Existing variables will be 
@@ -238,7 +258,7 @@ public class TestContext {
      * @return the constructed map without variable entries.
      */
     public <T> Map<String, T> resolveDynamicValuesInMap(final Map<String, T> map) {
-        Map<String, T> target = new HashMap<>(map.size());
+        Map<String, T> target = new LinkedHashMap<>(map.size());
 
         for (Entry<String, T> entry : map.entrySet()) {
             String key = replaceDynamicContentInString(entry.getKey());
@@ -503,19 +523,19 @@ public class TestContext {
     }
 
     /**
-     * Gets the message construction interceptors.
+     * Gets the global message construction interceptors.
      * @return
      */
-    public MessageConstructionInterceptors getMessageConstructionInterceptors() {
-        return messageConstructionInterceptors;
+    public GlobalMessageConstructionInterceptors getGlobalMessageConstructionInterceptors() {
+        return globalMessageConstructionInterceptors;
     }
 
     /**
-     * Sets the messsage construction interceptors.
+     * Sets the global messsage construction interceptors.
      * @param messageConstructionInterceptors
      */
-    public void setMessageConstructionInterceptors(MessageConstructionInterceptors messageConstructionInterceptors) {
-        this.messageConstructionInterceptors = messageConstructionInterceptors;
+    public void setGlobalMessageConstructionInterceptors(GlobalMessageConstructionInterceptors messageConstructionInterceptors) {
+        this.globalMessageConstructionInterceptors = messageConstructionInterceptors;
     }
 
     /**
@@ -617,7 +637,7 @@ public class TestContext {
      * @param timerId a unique timer id
      */
     public void registerTimer(String timerId, StopTimer timer) {
-        if(timers.containsKey(timerId)) {
+        if (timers.containsKey(timerId)) {
             throw new CitrusRuntimeException("Timer already registered with this id");
         }
         timers.put(timerId, timer);
@@ -630,7 +650,7 @@ public class TestContext {
      */
     public boolean stopTimer(String timerId) {
         StopTimer timer = timers.get(timerId);
-        if(timer != null) {
+        if (timer != null) {
             timer.stopTimer();
             return true;
         }

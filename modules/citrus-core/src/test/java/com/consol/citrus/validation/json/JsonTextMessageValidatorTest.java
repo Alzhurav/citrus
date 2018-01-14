@@ -18,17 +18,35 @@ package com.consol.citrus.validation.json;
 
 import com.consol.citrus.exceptions.CitrusRuntimeException;
 import com.consol.citrus.exceptions.ValidationException;
+import com.consol.citrus.json.JsonSchemaRepository;
 import com.consol.citrus.message.DefaultMessage;
 import com.consol.citrus.message.Message;
 import com.consol.citrus.testng.AbstractTestNGUnitTest;
+import com.consol.citrus.validation.json.report.GraciousProcessingReport;
+import com.consol.citrus.validation.json.schema.JsonSchemaValidation;
 import net.minidev.json.parser.ParseException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.testng.Assert;
 import org.testng.annotations.Test;
+
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * @author Christoph Deppisch
  */
 public class JsonTextMessageValidatorTest extends AbstractTestNGUnitTest {
+
+    @Autowired
+    @Qualifier("defaultJsonMessageValidator")
+    private JsonTextMessageValidator validator;
 
     @Test
     public void testJsonValidation() {
@@ -403,5 +421,29 @@ public class JsonTextMessageValidatorTest extends AbstractTestNGUnitTest {
         } catch (ValidationException e) {
             Assert.assertTrue(e.getMessage().contains("expected 'x123456789x' but was 'null'"));
         }
+    }
+
+    @Test
+    public void testUseSchemaRepositoryValidatorIfSchemaValidationIsEnabled() {
+
+        //GIVEN
+        JsonMessageValidationContext validationContext = new JsonMessageValidationContext();
+        validationContext.setSchemaValidation(true);
+
+        JsonSchemaValidation jsonSchemaValidation = mock(JsonSchemaValidation.class);
+        when(jsonSchemaValidation.validate(any(), anyList(), any(), any())).thenReturn(new GraciousProcessingReport((true)));
+        validator.setJsonSchemaValidation(jsonSchemaValidation);
+
+        JsonSchemaRepository jsonSchemaRepository = mock(JsonSchemaRepository.class);
+        validator.setSchemaRepositories(Collections.singletonList(jsonSchemaRepository));
+
+        Message receivedMessage = new DefaultMessage("{\"id\":42}");
+        Message controlMessage = new DefaultMessage("{\"id\":42}");
+
+        //WHEN
+        validator.validateMessage(receivedMessage, controlMessage, context, validationContext);
+
+        //THEN
+        verify(jsonSchemaValidation).validate(eq(receivedMessage), anyList(), eq(validationContext), eq(applicationContext));
     }
 }

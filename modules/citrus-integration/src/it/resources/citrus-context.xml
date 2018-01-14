@@ -134,7 +134,7 @@
          use-object-messages="true"
          destination-name="${jms.ws.stub.response}"/>
 
-    <citrus-restdocs:configurer id="restDocSoapConfigurer" type="soap" output-directory="test-output/generated-snippets"/>
+    <citrus-restdocs:configurer id="restDocSoapConfigurer" type="soap" output-directory="target/citrus-docs/generated-snippets"/>
     <citrus-restdocs:client-interceptor id="restDocSoapClientInterceptor" type="soap" identifier="test-case/{method-name}"/>
 
     <util:list id="restDocSoapInterceptors">
@@ -207,7 +207,7 @@
                       handle-cookies="true"
                       content-type="text/xml"/>
 
-    <citrus-restdocs:configurer id="restDocConfigurer" output-directory="test-output/generated-snippets"/>
+    <citrus-restdocs:configurer id="restDocConfigurer" output-directory="target/citrus-docs/generated-snippets"/>
     <citrus-restdocs:client-interceptor id="restDocClientInterceptor" identifier="test-case/{method-name}"/>
 
     <util:list id="restDocInterceptors">
@@ -249,12 +249,17 @@
 
     <citrus-restdocs:documentation id="restDocumentation" identifier="rest-docs/{method-name}"/>
 
-    <citrus-http:client id="httpStandaloneClient"
+    <citrus-http:client id="httpRestDocClient"
          request-url="http://localhost:8073/test"
          request-method="POST"
          interceptors="restDocumentation"
          content-type="text/xml"/>
   
+    <citrus-http:client id="httpStandaloneClient"
+         request-url="http://localhost:8073/test"
+         request-method="POST"
+         content-type="text/xml"/>
+
     <citrus-jms:endpoint id="httpServerRequestEndpoint" destination-name="${jms.queue.http.request.forward}"/>
 
     <citrus-jms:endpoint id="httpServerResponseEndpoint"

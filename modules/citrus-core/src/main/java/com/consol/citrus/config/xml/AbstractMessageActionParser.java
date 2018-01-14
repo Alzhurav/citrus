@@ -57,11 +57,15 @@ public abstract class AbstractMessageActionParser implements BeanDefinitionParse
             }
         }
 
-        if (messageBuilder != null) {
-            return messageBuilder;
-        } else {
-            return new PayloadTemplateMessageBuilder();
+        if (messageBuilder == null) {
+            messageBuilder = new PayloadTemplateMessageBuilder();
         }
+
+        if (messageElement != null && messageElement.hasAttribute("name")) {
+            messageBuilder.setMessageName(messageElement.getAttribute("name"));
+        }
+
+        return messageBuilder;
     }
     
     /**
@@ -127,10 +131,6 @@ public abstract class AbstractMessageActionParser implements BeanDefinitionParse
         }
         
         if (messageBuilder != null) {
-            if (messageElement.hasAttribute("name")) {
-                messageBuilder.setMessageName(messageElement.getAttribute("name"));
-            }
-
             Map<String, String> overwriteXpath = new HashMap<>();
             Map<String, String> overwriteJsonPath = new HashMap<>();
             List<?> messageValueElements = DomUtils.getChildElementsByTagName(messageElement, "element");
@@ -195,7 +195,7 @@ public abstract class AbstractMessageActionParser implements BeanDefinitionParse
      */
     protected void parseHeaderElements(Element actionElement, AbstractMessageContentBuilder messageBuilder) {
         Element headerElement = DomUtils.getChildElementByTagName(actionElement, "header");
-        Map<String, Object> messageHeaders = new HashMap<String, Object>();
+        Map<String, Object> messageHeaders = new LinkedHashMap<>();
 
         if (headerElement != null) {
             List<?> elements = DomUtils.getChildElementsByTagName(headerElement, "element");

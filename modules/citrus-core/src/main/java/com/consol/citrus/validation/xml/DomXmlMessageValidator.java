@@ -217,7 +217,7 @@ public class DomXmlMessageValidator extends AbstractMessageValidator<XmlMessageV
                 // Report all parsing errors
                 log.debug("Found " + results.length + " schema validation errors");
                 StringBuilder errors = new StringBuilder();
-                for(SAXParseException e : results) {
+                for (SAXParseException e : results) {
                     errors.append(e.toString());
                     errors.append("\n");
                 }
@@ -226,8 +226,6 @@ public class DomXmlMessageValidator extends AbstractMessageValidator<XmlMessageV
                 throw new ValidationException("XML schema validation failed:", results[0]);
             }
         } catch (IOException e) {
-            throw new CitrusRuntimeException(e);
-        } catch (SAXException e) {
             throw new CitrusRuntimeException(e);
         }
     }

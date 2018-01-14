@@ -20,21 +20,30 @@ import com.consol.citrus.Citrus;
 import com.consol.citrus.context.TestContext;
 import com.consol.citrus.exceptions.CitrusRuntimeException;
 import com.consol.citrus.exceptions.ValidationException;
+import com.consol.citrus.json.JsonSchemaRepository;
 import com.consol.citrus.message.Message;
 import com.consol.citrus.message.MessageType;
 import com.consol.citrus.validation.AbstractMessageValidator;
 import com.consol.citrus.validation.ValidationUtils;
+import com.consol.citrus.validation.json.schema.JsonSchemaValidation;
 import com.consol.citrus.validation.matcher.ValidationMatcherUtils;
+import com.github.fge.jsonschema.core.report.ProcessingReport;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.ReadContext;
 import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.parser.JSONParser;
 import net.minidev.json.parser.ParseException;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -50,22 +59,35 @@ import java.util.Set;
  * 
  * @author Christoph Deppisch
  */
-public class JsonTextMessageValidator extends AbstractMessageValidator<JsonMessageValidationContext> {
+public class JsonTextMessageValidator extends AbstractMessageValidator<JsonMessageValidationContext> implements ApplicationContextAware {
 
     /** Should also check exact amount of object fields */
     @Value("${citrus.json.message.validation.strict:true}")
     private boolean strict = true;
 
+    /** Root application context this validator is defined in */
+    private ApplicationContext applicationContext;
+
+    @Autowired(required = false)
+    private List<JsonSchemaRepository> schemaRepositories = new ArrayList<>();
+
+    /** Schema validator */
+    private JsonSchemaValidation jsonSchemaValidation = new JsonSchemaValidation();
+
     @Override
     @SuppressWarnings("unchecked")
     public void validateMessage(Message receivedMessage, Message controlMessage,
-                                TestContext context, JsonMessageValidationContext validationContext) throws ValidationException {
+                                TestContext context, JsonMessageValidationContext validationContext) {
         if (controlMessage == null || controlMessage.getPayload() == null) {
             log.debug("Skip message payload validation as no control message was defined");
             return;
         }
 
         log.debug("Start JSON message validation ...");
+
+        if (validationContext.isSchemaValidationEnabled()) {
+            performSchemaValidation(receivedMessage, validationContext);
+        }
 
         if (log.isDebugEnabled()) {
             log.debug("Received message:\n" + receivedMessage);
@@ -109,7 +131,28 @@ public class JsonTextMessageValidator extends AbstractMessageValidator<JsonMessa
         
         log.info("JSON message validation successful: All values OK");
     }
-    
+
+    /**
+     * Performs the schema validation for the given message under consideration of the given validation context
+     * @param receivedMessage The message to be validated
+     * @param validationContext The validation context of the current test
+     */
+    private void performSchemaValidation(Message receivedMessage, JsonMessageValidationContext validationContext) {
+        log.debug("Starting Json schema validation ...");
+
+        ProcessingReport report = jsonSchemaValidation.validate(receivedMessage,
+                                                                schemaRepositories,
+                                                                validationContext,
+                                                                applicationContext);
+        if (!report.isSuccess()) {
+            log.error("Failed to validate Json schema for message:\n" + receivedMessage.getPayload(String.class));
+
+            throw new ValidationException(constructErrorMessage(report));
+        }
+
+        log.info("Json schema validation successful: All values OK");
+    }
+
     /**
      * Validates JSON text with comparison to expected control JSON object.
      * JSON entries can be ignored with ignore placeholder.
@@ -292,4 +335,32 @@ public class JsonTextMessageValidator extends AbstractMessageValidator<JsonMessa
         return this;
     }
 
+    void setSchemaRepositories(List<JsonSchemaRepository> schemaRepositories) {
+        this.schemaRepositories = schemaRepositories;
+    }
+
+    /**
+     * Constructs the error message of a failed validation based on the processing report passed from
+     * com.github.fge.jsonschema.core.report
+     * @param report The report containing the error message
+     * @return A string representation of all messages contained in the report
+     */
+    private String constructErrorMessage(ProcessingReport report) {
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append("Json validation failed: ");
+        report.forEach(processingMessage -> stringBuilder.append(processingMessage.getMessage()));
+        return stringBuilder.toString();
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        this.applicationContext = applicationContext;
+    }
+
+    void setJsonSchemaValidation(JsonSchemaValidation jsonSchemaValidation) {
+        this.jsonSchemaValidation = jsonSchemaValidation;
+    }
 }

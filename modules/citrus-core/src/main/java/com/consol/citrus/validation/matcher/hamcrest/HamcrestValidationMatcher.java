@@ -19,19 +19,18 @@ package com.consol.citrus.validation.matcher.hamcrest;
 import com.consol.citrus.context.TestContext;
 import com.consol.citrus.exceptions.CitrusRuntimeException;
 import com.consol.citrus.exceptions.ValidationException;
-import com.consol.citrus.validation.matcher.ValidationMatcher;
+import com.consol.citrus.validation.matcher.*;
+import com.consol.citrus.variable.VariableUtils;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
-import org.springframework.util.Assert;
-import org.springframework.util.ReflectionUtils;
-import org.springframework.util.StringUtils;
+import org.springframework.util.*;
 
+import java.io.IOException;
+import java.io.StringReader;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -40,21 +39,23 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * @since 2.5
  */
 @SuppressWarnings("unchecked")
-public class HamcrestValidationMatcher implements ValidationMatcher {
+public class HamcrestValidationMatcher implements ValidationMatcher, ControlExpressionParser {
 
     private List<String> matchers = Arrays.asList( "equalTo", "equalToIgnoringCase", "equalToIgnoringWhiteSpace", "is", "not", "containsString", "startsWith", "endsWith" );
 
-    private List<String> collectionMatchers = Collections.singletonList("hasSize");
+    private List<String> collectionMatchers = Arrays.asList("hasSize", "hasItem", "hasItems", "contains", "containsInAnyOrder");
+
+    private List<String> mapMatchers = Arrays.asList("hasEntry", "hasKey", "hasValue");
 
     private List<String> numericMatchers = Arrays.asList( "greaterThan", "greaterThanOrEqualTo", "lessThan", "lessThanOrEqualTo" );
 
-    private List<String> containerMatchers = Arrays.asList( "is", "not" );
+    private List<String> containerMatchers = Arrays.asList( "is", "not", "everyItem" );
 
     private List<String> noArgumentMatchers = Arrays.asList( "isEmptyString", "isEmptyOrNullString", "nullValue", "notNullValue", "anything" );
 
     private List<String> noArgumentCollectionMatchers = Collections.singletonList("empty");
 
-    private List<String> iterableMatchers = Arrays.asList( "contains", "anyOf", "allOf" );
+    private List<String> iterableMatchers = Arrays.asList( "anyOf", "allOf" );
 
     @Override
     public void validate(String fieldName, String value, List<String> controlParameters, TestContext context) throws ValidationException {
@@ -71,9 +72,17 @@ public class HamcrestValidationMatcher implements ValidationMatcher {
         String matcherName = matcherExpression.trim().substring(0, matcherExpression.trim().indexOf("("));
         String[] matcherParameter = matcherExpression.trim().substring(matcherName.length() + 1, matcherExpression.trim().length() - 1).split(",");
 
+        for (int i = 0; i < matcherParameter.length; i++) {
+            matcherParameter[i] = VariableUtils.cutOffSingleQuotes(matcherParameter[i]);
+        }
+
         Matcher matcher = getMatcher(matcherName, matcherParameter);
-        if (noArgumentCollectionMatchers.contains(matcherName) || collectionMatchers.contains(matcherName)) {
+        if (noArgumentCollectionMatchers.contains(matcherName) ||
+                collectionMatchers.contains(matcherName) ||
+                matcherName.equals("everyItem")) {
             assertThat(getCollection(matcherValue), matcher);
+        } else if (mapMatchers.contains(matcherName)) {
+            assertThat(getMap(matcherValue), matcher);
         } else if (numericMatchers.contains(matcherName)) {
             assertThat(new NumericComparable(matcherValue), matcher);
         } else if (iterableMatchers.contains(matcherName) && containsNumericMatcher(matcherExpression)) {
@@ -165,6 +174,32 @@ public class HamcrestValidationMatcher implements ValidationMatcher {
                 if (matcherMethod != null) {
                     return (Matcher) matcherMethod.invoke(null, Integer.valueOf(matcherParameter[0]));
                 }
+
+                matcherMethod =  ReflectionUtils.findMethod(Matchers.class, matcherName, Object.class);
+
+                if (matcherMethod != null) {
+                    return (Matcher) matcherMethod.invoke(null, matcherParameter[0]);
+                }
+
+                matcherMethod =  ReflectionUtils.findMethod(Matchers.class, matcherName, Object[].class);
+
+                if (matcherMethod != null) {
+                    return (Matcher) matcherMethod.invoke(null, new Object[] { matcherParameter });
+                }
+            }
+
+            if (mapMatchers.contains(matcherName)) {
+                Method matcherMethod =  ReflectionUtils.findMethod(Matchers.class, matcherName, Object.class);
+
+                if (matcherMethod != null) {
+                    return (Matcher) matcherMethod.invoke(null, matcherParameter[0]);
+                }
+
+                matcherMethod =  ReflectionUtils.findMethod(Matchers.class, matcherName, Object.class, Object.class);
+
+                if (matcherMethod != null) {
+                    return (Matcher) matcherMethod.invoke(null, matcherParameter[0], matcherParameter[1]);
+                }
             }
         } catch (InvocationTargetException | IllegalAccessException e) {
             throw new CitrusRuntimeException("Failed to invoke matcher", e);
@@ -185,7 +220,46 @@ public class HamcrestValidationMatcher implements ValidationMatcher {
             arrayString = arrayString.substring(1, arrayString.length()-1);
         }
 
-        return Arrays.asList(StringUtils.commaDelimitedListToStringArray(arrayString));
+        return Arrays.stream(StringUtils.commaDelimitedListToStringArray(arrayString))
+                .map(VariableUtils::cutOffDoubleQuotes)
+                .map(String::trim)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Construct collection from delimited string expression.
+     * @param mapString
+     * @return
+     */
+    private Map<String, Object> getMap(String mapString) {
+        Properties props = new Properties();
+        
+        try {
+            props.load(new StringReader(mapString.substring(1, mapString.length() - 1).replaceAll(",\\s*", "\n")));
+        } catch (IOException e) {
+            throw new CitrusRuntimeException("Failed to reconstruct object of type map", e);
+        }
+
+        Map<String, Object> map = new LinkedHashMap<>();
+        for (Map.Entry<Object, Object> entry : props.entrySet()) {
+            String key;
+            Object value;
+            if (entry.getKey() instanceof String) {
+                key = VariableUtils.cutOffDoubleQuotes(entry.getKey().toString());
+            } else {
+                key = entry.getKey().toString();
+            }
+
+            if (entry.getValue() instanceof String) {
+                value = VariableUtils.cutOffDoubleQuotes(entry.getValue().toString()).trim();
+            } else {
+                value = entry.getValue();
+            }
+
+            map.put(key, value);
+        }
+
+        return map;
     }
 
     /**
@@ -201,6 +275,15 @@ public class HamcrestValidationMatcher implements ValidationMatcher {
         }
 
         return false;
+    }
+
+    @Override
+    public List<String> extractControlValues(String controlExpression, Character delimiter) {
+        if (controlExpression.startsWith("'") && controlExpression.contains("',")) {
+            return new DefaultControlExpressionParser().extractControlValues(controlExpression, delimiter);
+        } else {
+            return Collections.singletonList(controlExpression);
+        }
     }
 
     /**

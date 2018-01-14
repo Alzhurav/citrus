@@ -153,7 +153,7 @@ public class SendMessageBuilder<A extends SendMessageAction, T extends SendMessa
             throw new CitrusRuntimeException("Unable to set payload on message builder type: " + messageContentBuilder.getClass());
         }
     }
-
+    
     /**
      * Sets the message name.
      * @param name
@@ -173,7 +173,7 @@ public class SendMessageBuilder<A extends SendMessageAction, T extends SendMessa
         setPayload(payload);
         return self;
     }
-    
+
     /**
      * Adds message payload resource to this builder.
      * @param payloadResource
